@@ -16,11 +16,11 @@ public class JobProcessor
 
     private async Task<int> ProcessIO(string payload)
     {
-        int delay = int.Parse(payload.Split(":")[1]);
+        int delay = int.Parse(payload.Split(":")[1].Replace("_", ""));
         await Task.Delay(delay);
-        return new Random().Next(0, 100);
+        return new Random().Next(0, 101);
     }
-
+    
     private async Task<int> ProcessPrime(string payload)
     {
         string[] parts = payload.Split(",");
