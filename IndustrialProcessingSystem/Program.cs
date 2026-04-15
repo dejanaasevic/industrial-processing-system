@@ -4,16 +4,16 @@ class Program
     static async Task Main()
     {
         SystemConfig config = ConfigLoader.Load("SystemConfig.xml");
-        Console.WriteLine($"Workers: {config.WorkerCount}");
-        Console.WriteLine($"MaxQueue: {config.MaxQueueSize}");
+        ProcessingSystem processingSystem = new ProcessingSystem(config);
+        EventLogger logger = new EventLogger("log.txt");
 
-        JobProcessor processor = new JobProcessor();
-        
-        foreach (var job in config.Jobs)
-        {
-            Console.WriteLine($"{job.Type} | {job.Payload} | {job.Priority}");
-            var result = await processor.ExecuteJob(job);
-            Console.WriteLine(result);
-        }
+        processingSystem.JobCompleted += async (sender, e) => 
+            await logger.LogEvent(e.Id, e.Status, e.Result);
+
+        processingSystem.JobFailed += async (sender, e) =>
+            await logger.LogEvent(e.Id, e.Status, e.Result);
+
+        processingSystem.JobAborted += async (sender, e) =>
+             await logger.LogEvent(e.Id, e.Status, e.Result);
     }
 }
