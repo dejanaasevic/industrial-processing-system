@@ -1,12 +1,15 @@
 ﻿
-public class JobEventArgs
+public class JobEventArgs : EventArgs
 {
-    public Guid id { get; set; }
-    public int result { get; set; }
+    public Guid Id { get; set; }
+    public int Result { get; set; }
 
-    public JobEventArgs(Guid id, int result)
+    public JobStatus Status { get; set; }
+
+    public JobEventArgs(Guid id, JobStatus status, int result)
     {
-        this.id = id;
-        this.result = result;
+        Id = id;
+        Status = Status;
+        Result = result;
     }
 }
