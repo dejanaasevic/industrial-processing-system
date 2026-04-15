@@ -15,7 +15,10 @@
         {
             line = $"[{DateTime.Now:dd-MM-yyyy HH:mm:ss}] [{status}] {id}, null\n";
         }
-        line = $"[{DateTime.Now:dd-MM-yyyy HH:mm:ss}] [{status}] {id}, {result}\n";
+        else
+        {
+            line = $"[{DateTime.Now:dd-MM-yyyy HH:mm:ss}] [{status}] {id}, {result}\n";
+        }
 
         await _write.WaitAsync();
 

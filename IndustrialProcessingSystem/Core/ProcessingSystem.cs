@@ -1,4 +1,6 @@
-﻿public class ProcessingSystem
+﻿using System.Diagnostics;
+
+public class ProcessingSystem
 {
     private readonly Dictionary<Guid, Job> _allJobs = new();                                
     private readonly PriorityQueue<Job, int> _queue = new();                                
@@ -27,7 +29,13 @@
 
         foreach(Job job in config.Jobs)
         {
-            Submit(job);
+            try {
+                Submit(job);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"Failed to submit job {job.Id}: {ex.Message}");
+            }
         }
     }
 
@@ -81,12 +89,14 @@
         int attempts = 0;
         while (true)
         {
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 var result = await _jobProcessor.ExecuteJob(job).WaitAsync(TimeSpan.FromSeconds(2));
+                stopwatch.Stop();
                 tcs.SetResult(result);
 
-                await Task.Run(() => JobCompleted?.Invoke(this, new JobEventArgs(job.Id, JobStatus.Completed, result)));
+                JobCompleted?.Invoke(this, new JobEventArgs(job.Id, result, JobStatus.Completed, job.Type,stopwatch.Elapsed));
                 lock (_lock)
                 {
                     _pendingJobs.Remove(job.Id);
@@ -96,12 +106,17 @@
 
             catch(Exception ex)
             {
+                stopwatch.Stop();
                 attempts++;
-                await Task.Run(() => JobFailed?.Invoke(this, new JobEventArgs(job.Id, JobStatus.Failed, - 1)));
-
-                if (attempts >= 3){
+                if(attempts == 1 || attempts == 2)
+                {
+                    JobFailed?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Failed, job.Type, stopwatch.Elapsed));
+                }
+                
+                else
+                {
                     tcs.SetException(ex);
-                    await Task.Run(() => JobAborted?.Invoke(this, new JobEventArgs(job.Id, JobStatus.Aborted, - 1)));
+                    JobAborted?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Aborted, job.Type, TimeSpan.Zero));
                     lock (_lock)
                     {
                         _pendingJobs.Remove(job.Id);
@@ -129,5 +144,4 @@
             return _queue.UnorderedItems.OrderBy(x => x.Priority).Take(n).Select(x => x.Element).ToList();
         }
     }
-
 }

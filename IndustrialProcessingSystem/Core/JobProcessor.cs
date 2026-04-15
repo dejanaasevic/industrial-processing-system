@@ -50,7 +50,7 @@ public class JobProcessor
         if (x <= 1) return false;
         if (x == 2) return true;
         if (x % 2 == 0) return false;
-        for(int i = 3; i < Math.Sqrt(x); i += 2)
+        for(int i = 3; i <= Math.Sqrt(x); i += 2)
         {
             if (x % i == 0) return false;
         }
