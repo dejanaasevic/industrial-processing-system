@@ -86,36 +86,32 @@ public class ProcessingSystem
 
     private async Task ExecuteJob(Job job, TaskCompletionSource<int> tcs)
     {
+        const int maxAttempts = 3;
         int attempts = 0;
-        while (true)
+
+        while (attempts < maxAttempts)
         {
             var stopwatch = Stopwatch.StartNew();
             try
             {
                 var result = await _jobProcessor.ExecuteJob(job).WaitAsync(TimeSpan.FromSeconds(2));
                 stopwatch.Stop();
-                tcs.SetResult(result);
-
-                JobCompleted?.Invoke(this, new JobEventArgs(job.Id, result, JobStatus.Completed, job.Type,stopwatch.Elapsed));
+                tcs.TrySetResult(result);
+                
+                JobCompleted?.Invoke(this, new JobEventArgs(job.Id, result, JobStatus.Completed, job.Type, stopwatch.Elapsed));
                 lock (_lock)
-                {
+                { 
                     _pendingJobs.Remove(job.Id);
                 }
                 return;
             }
-
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 stopwatch.Stop();
                 attempts++;
-                if(attempts == 1 || attempts == 2)
+                if (attempts == maxAttempts)
                 {
-                    JobFailed?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Failed, job.Type, stopwatch.Elapsed));
-                }
-                
-                else
-                {
-                    tcs.SetException(ex);
+                    tcs.TrySetException(ex);
                     JobAborted?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Aborted, job.Type, TimeSpan.Zero));
                     lock (_lock)
                     {
@@ -123,6 +119,9 @@ public class ProcessingSystem
                     }
                     return;
                 }
+                JobFailed?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Failed, job.Type, stopwatch.Elapsed));
+                
+                await Task.Delay(50 * attempts);
             }
         }
     }
