@@ -1,6 +1,7 @@
 ﻿using System;
 class Program
 {
+    private static readonly object _consoleLock = new();
     static async Task Main()
     {
         Console.WriteLine("[SYSTEM] Loading configuration...");
@@ -13,21 +14,35 @@ class Program
 
         processingSystem.JobCompleted += (sender, e) =>
         {
-            Console.WriteLine($"[COMPLETED] Job {e.Id} | Type: {e.Type} | Result: {e.Result} | Duration: {e.Duration.TotalMilliseconds:F0}ms");
-            _ = logger.LogEvent(e.Id, e.Status, e.Result);
+            lock (_consoleLock)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"[COMPLETED] Job {e.Id} | Type: {e.Type} | Result: {e.Result} | Duration: {e.Duration.TotalMilliseconds:F0}ms");
+                Console.ResetColor();
+            }
             reportGenerator.RecordJob(e.Type, true, e.Duration);
         };
 
         processingSystem.JobFailed += (sender, e) =>
         {
-            Console.WriteLine($"[FAILED]    Job {e.Id} | Type: {e.Type} | Duration: {e.Duration.TotalMilliseconds:F0}ms (retrying...)");
+            lock (_consoleLock)
+            {
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine($"[FAILED] Job {e.Id}");
+                Console.ResetColor();
+            }
             _ = logger.LogEvent(e.Id, e.Status, e.Result);
             reportGenerator.RecordJob(e.Type, false, e.Duration);
         };
 
         processingSystem.JobAborted += (sender, e) =>
         {
-            Console.WriteLine($"[ABORTED]   Job {e.Id} | Type: {e.Type} | Gave up after 3 attempts");
+            lock (_consoleLock)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                Console.WriteLine($"[ABORTED] Job {e.Id} | Type: {e.Type} | Gave up after 3 attempts");
+                Console.ResetColor();
+            }
             _ = logger.LogEvent(e.Id, e.Status, e.Result);
             reportGenerator.RecordJob(e.Type, false, e.Duration);
         };
@@ -43,22 +58,40 @@ class Program
                 Random random = Random.Shared;
                 while (true)
                 {
-                    try
+                    for (int j = 0; j < random.Next(3, 8); j++)
                     {
-                        Job job = GenerateRandomJob(random);
-                        JobHandle handle = processingSystem.Submit(job);
-                        Console.WriteLine($"[SUBMITTED] Producer #{producerId} submitted Job {job.Id} | Type: {job.Type} | Priority: {job.Priority}");
-                    }
-                    catch (InvalidOperationException ex)
-                    {
-                        Console.WriteLine($"[WARN] Producer #{producerId}: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[WARN] Producer #{producerId} submit failed: {ex.Message}");
-                    }
+                        try
+                        {
+                            Job job = GenerateRandomJob(random);
+                            JobHandle handle = processingSystem.Submit(job);
+                            lock (_consoleLock)
+                            {
+                                Console.ForegroundColor = ConsoleColor.White;
+                                Console.WriteLine($"[SUBMITTED] Producer #{producerId} submitted Job {job.Id} | Type: {job.Type} | Priority: {job.Priority}");
+                                Console.ResetColor();
+                            }
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            lock (_consoleLock)
+                            {
+                                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                                Console.WriteLine($"[WARN] Producer #{producerId}: {ex.Message}");
+                                Console.ResetColor();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            lock (_consoleLock)
+                            {
+                                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                                Console.WriteLine($"[WARN] Producer #{producerId} submit failed: {ex.Message}");
+                                Console.ResetColor();
+                            }
+                        }
 
-                    await Task.Delay(random.Next(5000, 10000));
+                    }
+                    await Task.Delay(random.Next(500, 1500));
                 }
             }));
         }
@@ -67,7 +100,7 @@ class Program
         {
             while (true)
             {
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(3));
                 PrintQueueStatus(processingSystem);
             }
         });
@@ -79,28 +112,28 @@ class Program
     /// Demonstrates GetTopJobs and GetJob — prints top 3 pending jobs from queue.
     private static void PrintQueueStatus(ProcessingSystem processingSystem)
     {
-        Console.WriteLine("\n========== QUEUE STATUS ==========");
-        var topJobs = processingSystem.GetTopJobs(3).ToList();
+        lock (_consoleLock)
+        {
+            Console.WriteLine("\n========== QUEUE STATUS ==========");
 
-        if (!topJobs.Any())
-        {
-            Console.WriteLine("[STATUS] Queue is currently empty.");
-        }
-        else
-        {
-            Console.WriteLine($"[STATUS] Top {topJobs.Count} jobs in queue (by priority):");
-            foreach (var job in topJobs)
+            var topJobs = processingSystem.GetTopJobs(3).ToList();
+
+            if (!topJobs.Any())
             {
-                Job fetched = processingSystem.GetJob(job.Id);
-                if (fetched != null)
+                Console.WriteLine("[STATUS] Queue is currently empty.");
+            }
+            else
+            {
+                Console.WriteLine($"[STATUS] Top {topJobs.Count} jobs in queue:");
+                foreach (var job in topJobs)
                 {
-                    Console.WriteLine($"  -> Id: {fetched.Id} | Type: {fetched.Type} | Priority: {fetched.Priority} | Payload: {fetched.Payload}");
+                    var fetched = processingSystem.GetJob(job.Id);
+                    Console.WriteLine($"  -> Id: {fetched.Id} | Type: {fetched.Type} | Priority: {fetched.Priority}");
                 }
             }
+            Console.WriteLine("===================================\n");
         }
-        Console.WriteLine("===================================\n");
     }
-
     // Generates a random job for both Prime and IO type with random parameters
     private static Job GenerateRandomJob(Random random)
     {
@@ -116,7 +149,7 @@ class Program
         else
         {
             int delay = random.Next(1, 4);
-            payload = $"delay:{delay}_00"; 
+            payload = $"delay:{delay}_000";
         }
 
         int priority = random.Next(1, 6);
