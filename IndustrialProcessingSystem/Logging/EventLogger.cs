@@ -8,6 +8,7 @@
         this.filePath = filePath;
     }
 
+    // Logs an event to the file with a timestamp, status, job ID, and result 
     public async Task LogEvent(Guid id, JobStatus status, int result)
     {
         string line;

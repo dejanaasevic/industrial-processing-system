@@ -76,6 +76,7 @@ class Program
         await Task.WhenAll(producerTasks);
     }
 
+    /// Demonstrates GetTopJobs and GetJob — prints top 3 pending jobs from queue.
     private static void PrintQueueStatus(ProcessingSystem processingSystem)
     {
         Console.WriteLine("\n========== QUEUE STATUS ==========");
@@ -100,6 +101,7 @@ class Program
         Console.WriteLine("===================================\n");
     }
 
+    // Generates a random job for both Prime and IO type with random parameters
     private static Job GenerateRandomJob(Random random)
     {
         JobType type = (JobType)random.Next(0, 2);

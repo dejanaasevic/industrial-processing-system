@@ -13,6 +13,7 @@ public class ReportGenerator
         _ = Task.Run(() => GenerateReportLoop());
     }
 
+    // Records a job's result for later reporting
     public void RecordJob(JobType type, bool success, TimeSpan duration)
     {
         lock (_lock)
@@ -21,6 +22,7 @@ public class ReportGenerator
         }
     }
 
+    // Continuously generates reports every minute by aggregating job records and saving them as XML files
     private async Task GenerateReportLoop()
     {
         while (true)
@@ -30,6 +32,7 @@ public class ReportGenerator
         }
     }
 
+    // Generates a report by aggregating job records, creating an XML document, and saving it to a file
     private void GenerateReport()
     {
         List<JobRecord> records;
@@ -54,6 +57,7 @@ public class ReportGenerator
         _fileIndex++;
     }
 
+    // Generates an XML decoment based on data
     private XElement GenerateXml(IEnumerable<(JobType Type, int Count)> countByType, IEnumerable<(JobType Type, double AvgMs)> averageDurationByType, IEnumerable<(JobType Type, int Count)> failedByType)
     {
         return new XElement("Report",
