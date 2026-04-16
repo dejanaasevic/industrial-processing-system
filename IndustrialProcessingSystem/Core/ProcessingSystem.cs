@@ -29,7 +29,8 @@ public class ProcessingSystem
 
         foreach(Job job in config.Jobs)
         {
-            try {
+            try
+            {
                 Submit(job);
             }
             catch(Exception ex)
@@ -45,7 +46,7 @@ public class ProcessingSystem
         {
             if (_seenId.Contains(job.Id))
             {
-                return new JobHandle(job.Id, _pendingJobs[job.Id].Task);
+                throw new InvalidOperationException($"Job {job.Id} already submitted.");
             }
 
             if (_queue.Count >= _maxQueueSize)
@@ -79,8 +80,8 @@ public class ProcessingSystem
                 if (!_queue.TryDequeue(out job, out _)) continue;
                 if (!_pendingJobs.TryGetValue(job.Id, out tcs)) continue;
             }
-            await ExecuteJob(job, tcs);
 
+            await ExecuteJob(job, tcs);
         }
     }
 
@@ -98,7 +99,7 @@ public class ProcessingSystem
                 stopwatch.Stop();
                 tcs.TrySetResult(result);
                 
-                JobCompleted?.Invoke(this, new JobEventArgs(job.Id, result, JobStatus.Completed, job.Type, stopwatch.Elapsed));
+                JobCompleted?.Invoke(this, new JobEventArgs(job.Id, result, JobStatus.Complete, job.Type, stopwatch.Elapsed));
                 lock (_lock)
                 { 
                     _pendingJobs.Remove(job.Id);
@@ -112,14 +113,14 @@ public class ProcessingSystem
                 if (attempts == maxAttempts)
                 {
                     tcs.TrySetException(ex);
-                    JobAborted?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Aborted, job.Type, TimeSpan.Zero));
+                    JobAborted?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Abort, job.Type, stopwatch.Elapsed));
                     lock (_lock)
                     {
                         _pendingJobs.Remove(job.Id);
                     }
                     return;
                 }
-                JobFailed?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Failed, job.Type, stopwatch.Elapsed));
+                JobFailed?.Invoke(this, new JobEventArgs(job.Id, -1, JobStatus.Fail, job.Type, stopwatch.Elapsed));
                 
                 await Task.Delay(50 * attempts);
             }
