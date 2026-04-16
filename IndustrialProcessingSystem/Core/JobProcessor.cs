@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-public class JobProcessor
+﻿public class JobProcessor
 {
     public async Task<int> ExecuteJob(Job job) {
         switch (job.Type)
