@@ -1,7 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-public class JobProcessor
+﻿public class JobProcessor
 {
+    // Executes a job based on its type
     public async Task<int> ExecuteJob(Job job) {
         switch (job.Type)
         {
@@ -14,6 +13,7 @@ public class JobProcessor
         }
     }
 
+    // Processes an IO job by simulating a delay and returning a random result
     private async Task<int> ProcessIO(string payload)
     {
         int delay = int.Parse(payload.Split(":")[1].Replace("_", ""));
@@ -21,6 +21,7 @@ public class JobProcessor
         return new Random().Next(0, 101);
     }
     
+    // Processes a prime counting job using maximum thread specified in the payload
     private async Task<int> ProcessPrime(string payload)
     {
         string[] parts = payload.Split(",");
@@ -31,6 +32,7 @@ public class JobProcessor
         return await Task.Run(() => CountPrimes(max, threads));
     }
 
+    // Counts the number of prime numbers in a given range with parallel processing
     private int CountPrimes(int max, int threads)
     {
         int count = 0;
@@ -45,6 +47,7 @@ public class JobProcessor
         return count;
     }
 
+    // Checks if a number is prime
     private bool IsPrime(int x)
     {
         if (x <= 1) return false;

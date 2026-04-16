@@ -2,6 +2,7 @@
 
 public class ConfigLoader
 {
+    // Loads the system configuration from an XML file
     public static SystemConfig Load(string filePath)
     {
         var xml = XElement.Load(filePath);

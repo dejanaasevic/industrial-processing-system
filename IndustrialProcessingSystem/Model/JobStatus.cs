@@ -1,6 +1,6 @@
 ﻿public enum JobStatus
 {
-    Completed,
-    Failed,
-    Aborted
+    Complete,
+    Fail,
+    Abort
 }
