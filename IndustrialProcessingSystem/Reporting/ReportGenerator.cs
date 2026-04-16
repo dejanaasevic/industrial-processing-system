@@ -39,9 +39,12 @@ public class ReportGenerator
             _jobRecords.Clear();
         }
 
-        var countByType = records.GroupBy(r => r.Type).Select(g => (Type: g.Key, Count: g.Count()));
-        var averageDurationByType = records.GroupBy(r => r.Type).Select(g => (Type: g.Key,AvgMs: g.Any() ? g.Average(r => r.Duration.TotalMilliseconds) : 0));
-        var failedByType = records.Where(r => !r.Success).GroupBy(r => r.Type).OrderBy(g => g.Key).Select(g => (Type: g.Key, Count: g.Count()));
+        var completed = records.Where(r => r.Success == true);
+        var unsuccessful = records.Where(r => r.Success == false);
+
+        var countByType = completed.GroupBy(r => r.Type).Select(g => (Type: g.Key, Count: g.Count()));
+        var averageDurationByType = completed.GroupBy(r => r.Type).Select(g => (Type: g.Key, AvgMs: g.Average(r => r.Duration.TotalMilliseconds)));
+        var failedByType = unsuccessful.GroupBy(r => r.Type).OrderBy(g => g.Key).Select(g => (Type: g.Key, Count: g.Count()));
 
         var xml = GenerateXml(countByType, averageDurationByType, failedByType);
 
