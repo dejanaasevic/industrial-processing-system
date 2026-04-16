@@ -1,7 +1,7 @@
 ﻿public class EventLogger
 {
-    public readonly string filePath;
-    public readonly SemaphoreSlim _write = new(1, 1);
+    private readonly string filePath;
+    private readonly SemaphoreSlim _write = new(1, 1);
 
     public EventLogger(string filePath)
     {
@@ -11,7 +11,7 @@
     public async Task LogEvent(Guid id, JobStatus status, int result)
     {
         string line;
-        if (status == JobStatus.Failed || status == JobStatus.Aborted)
+        if (status == JobStatus.Fail || status == JobStatus.Abort)
         {
             line = $"[{DateTime.Now:dd-MM-yyyy HH:mm:ss}] [{status}] {id}, null\n";
         }
